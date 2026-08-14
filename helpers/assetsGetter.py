@@ -56,4 +56,4 @@ def get_profile_icon(color: TileState, isRobot: bool = False) -> str:
             return "assets/connect4/blue_human.png"
 
 def get_click_sound() -> str:
-    return "assets/connect4/click.mp3"
+    return "assets/connect4/click.ogg"
