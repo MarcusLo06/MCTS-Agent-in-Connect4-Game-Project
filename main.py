@@ -9,7 +9,7 @@ from helpers.pixelTranslate import translatePixelToCoordinate
 from helpers.customTextRender import render_text_with_outline
 from helpers.assetsGetter import get_pixels_font, get_profile_icon
 from customEnums import TileState, GameState
-from classes.MCTS import MCTSNode, mcts_search, free_mcts_memory
+from classes.MCTS import mcts_search
 
 
 from settings import WIDTH, HEIGHT, FPS, BG, ROWS, COLUMNS, TOPBARHEIGHT, TOPBARCOLOR, FOOTERHEIGHT
@@ -38,7 +38,7 @@ async def game_scene(screen, clock, playbutton):
     debug = False
     processing = False
     turn_no = 0
-    mcts_iterations = 500
+    mcts_iterations = 1000
 
     red_is_robot = False
     blue_is_robot = False
@@ -126,7 +126,6 @@ async def game_scene(screen, clock, playbutton):
                     processing = True
                     # Clone before sending to background thread
                     board_snapshot = tileMap.clone()
-                    # await run_mcts_worker(board_snapshot, tileMap.turn, mcts_iterations, ai_queue)
                     ai_task = asyncio.create_task(mcts_search(board_snapshot, tileMap.turn, iterations=mcts_iterations))
 
                 # 2. Check if the thread finished
