@@ -1,4 +1,4 @@
-import pygame, random, math, copy, gc
+import pygame, random, math, copy, gc, asyncio
 from pygame.math import Vector2
 from .tilemap import TileMap
 from .tile import Tile
@@ -63,10 +63,13 @@ def free_mcts_memory(root_node: MCTSNode):
     # Force Python's cyclic garbage collector to purge unreferenced objects
     gc.collect()
 
-def mcts_search(root_board: TileMap, team_color: TileState, iterations = 500):
+async def mcts_search(root_board: TileMap, team_color: TileState, iterations = 500):
     root_node = MCTSNode(root_board)
 
-    for _ in range(iterations):
+    for i in range(iterations):
+        if i % 25 == 0:
+            await asyncio.sleep(0)
+
         node = root_node
         board = root_node.board.clone()
 

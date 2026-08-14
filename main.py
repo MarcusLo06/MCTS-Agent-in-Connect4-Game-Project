@@ -1,4 +1,5 @@
-import sys, pygame, random, threading
+import sys, pygame, random
+import asyncio
 from queue import Queue
 from pygame.math import Vector2
 from classes.tile import Tile
@@ -12,16 +13,10 @@ from classes.MCTS import MCTSNode, mcts_search, free_mcts_memory
 
 
 from settings import WIDTH, HEIGHT, FPS, BG, ROWS, COLUMNS, TOPBARHEIGHT, TOPBARCOLOR, FOOTERHEIGHT
-
-
-def run_mcts_worker(board_copy, turn, iterations, result_queue):
-    """Runs MCTS in a separate thread and sends results back via Queue."""
-    move, stats, ucb = mcts_search(board_copy, turn, iterations=iterations)
-    result_queue.put((move, stats, ucb))
     
 
 
-def game_scene(screen, clock, playbutton):
+async def game_scene(screen, clock, playbutton):
     tileSize = Vector2(WIDTH // COLUMNS, (HEIGHT) // ROWS)
     tileMap = TileMap(screen, ROWS, COLUMNS, TOPBARHEIGHT, FOOTERHEIGHT, tileSize)
 
@@ -48,23 +43,19 @@ def game_scene(screen, clock, playbutton):
     red_is_robot = False
     blue_is_robot = False
 
-    # Global/Class variables
-    ai_thread = None
-    ai_queue = Queue()
-
+    ai_task = None
 
     columns_stats: dict[int,dict] = {}
     ucb_score: float = 0.0
     ai_move: Vector2 = None
 
 
-
-    def reset_game():
-        game_scene(screen, clock, playbutton)
+    async def reset_game():
+        await game_scene(screen, clock, playbutton)
         # print("restarting")
         # tileMap.reset()
 
-    def toggle_red_player():
+    async def toggle_red_player():
         nonlocal red_is_robot, red_player_btn
         if tileMap.turn == TileState.RED and processing: return
         red_is_robot = not red_is_robot
@@ -72,7 +63,7 @@ def game_scene(screen, clock, playbutton):
         red_player_btn.refresh_image()
 
 
-    def toggle_blue_player():
+    async def toggle_blue_player():
         nonlocal blue_is_robot, blue_player_btn
         if tileMap.turn == TileState.BLUE and processing: return
         blue_is_robot = not blue_is_robot
@@ -100,16 +91,16 @@ def game_scene(screen, clock, playbutton):
                     debug = not debug
                     
             if tileMap.state != GameState.PLAYING:
-                playbutton.handle_event(e)
+                await playbutton.handle_event(e)
 
                 
             else:
-                red_player_btn.handle_event(e)
-                blue_player_btn.handle_event(e)
+                await red_player_btn.handle_event(e)
+                await blue_player_btn.handle_event(e)
             
                 if e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_SPACE:
-                        ai_move, columns_stats, ucb_score = mcts_search(tileMap, tileMap.turn, iterations=mcts_iterations)
+                        ai_move, columns_stats, ucb_score = asyncio.create_task(mcts_search(tileMap, tileMap.turn, iterations=mcts_iterations))
 
                         if ai_move is not None:
                             tileMap.place_at_columns(ai_move)
@@ -135,26 +126,21 @@ def game_scene(screen, clock, playbutton):
                     processing = True
                     # Clone before sending to background thread
                     board_snapshot = tileMap.clone()
-                    ai_thread = threading.Thread(
-                        target=run_mcts_worker, 
-                        args=(board_snapshot, tileMap.turn, mcts_iterations, ai_queue),
-                        daemon=True
-                    )
-                    ai_thread.start()
+                    # await run_mcts_worker(board_snapshot, tileMap.turn, mcts_iterations, ai_queue)
+                    ai_task = asyncio.create_task(mcts_search(board_snapshot, tileMap.turn, iterations=mcts_iterations))
 
                 # 2. Check if the thread finished
-                elif processing and not ai_queue.empty():
-                    ai_move, columns_stats, ucb_score = ai_queue.get()
+                elif processing and ai_task is not None and ai_task.done():
+                    ai_move, columns_stats, ucb_score = ai_task.result()
                     if ai_move is not None:
                         if tileMap.place_at_columns(ai_move):
                             turn_no += 1
                     
                     processing = False
-                    ai_thread = None
 
 
         # update UCB Score
-        if ai_move:
+        if ai_move and columns_stats and ucb_score:
             lastest_tile = tileMap.tilesDictionary[tuple(ai_move)]
             lastest_tile.ucb_score = ucb_score
             lastest_tile.winrate = columns_stats[ai_move[0]]["win_rate"]
@@ -266,13 +252,15 @@ def game_scene(screen, clock, playbutton):
             red_player_btn.draw(screen)
             blue_player_btn.draw(screen)
 
+        await asyncio.sleep(0)
+
 
         pygame.display.flip()
 
     pygame.quit()
     sys.exit(0)
 
-def main():
+async def main():
     pygame.init()
     pygame.display.set_caption("MCTS Agents in Connect4")
 
@@ -282,7 +270,9 @@ def main():
     playFont = pygame.font.Font(get_pixels_font() , 22)
     play_button = UIButton(WIDTH // 2, TOPBARHEIGHT + (HEIGHT // 2), 120, 50, (0, 200, 0), playFont, "Restart", (255, 255, 255))
 
-    game_scene(screen, clock, play_button)
+    await game_scene(screen, clock, play_button)
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+

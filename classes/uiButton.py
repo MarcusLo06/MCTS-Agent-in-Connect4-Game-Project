@@ -37,12 +37,12 @@ class UIButton:
                 text_rect = text_surf.get_rect(center=self.rect.center)
                 surface.blit(text_surf, text_rect)
 
-    def handle_event(self, event):
+    async def handle_event(self, event):
         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1):
             # Check if the mouse click was inside the button's rectangle
             if self.rect.collidepoint(event.pos):
                 if self.on_click is not None:
-                    self.on_click()  # Trigger the callback function
+                    await self.on_click()  # Trigger the callback function
         # elif (event.type == pygame.KEYDOWN and event.key == pygame.K_r):
         #       if self.on_click is not None:
         #             self.on_click()  # Trigger the callback function
