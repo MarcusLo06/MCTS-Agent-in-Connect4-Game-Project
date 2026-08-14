@@ -1,5 +1,6 @@
 import sys, pygame, random
 import asyncio
+from pygame import mixer
 from queue import Queue
 from pygame.math import Vector2
 from classes.tile import Tile
@@ -261,6 +262,7 @@ async def game_scene(screen, clock, playbutton):
 
 async def main():
     pygame.init()
+    mixer.init()
     pygame.display.set_caption("MCTS Agents in Connect4")
 
     screen = pygame.display.set_mode((WIDTH,HEIGHT + FOOTERHEIGHT + TOPBARHEIGHT))

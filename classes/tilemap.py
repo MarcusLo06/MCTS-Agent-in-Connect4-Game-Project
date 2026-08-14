@@ -1,7 +1,9 @@
 import pygame
+from pygame import mixer
 from pygame.math import Vector2
 from .tile import Tile
 from customEnums import TileState, GameState
+from helpers.assetsGetter import get_click_sound
 
 class TileMap:
     def __init__(self, surface: pygame.surface, rows: int = 10, columns: int = 10, topBarHeight: int = 0, footerHeight: int = 0, tileSize: Vector2 = Vector2(50, 50)):
@@ -17,6 +19,10 @@ class TileMap:
         self.placed = 0
         self.turn = TileState.RED
         self.state = GameState.PLAYING
+
+
+        self.click_sound = pygame.mixer.Sound(get_click_sound())
+        self.click_sound.set_volume(0.7)
 
 
     def clone(self):
@@ -225,7 +231,9 @@ class TileMap:
                     # print("game draw")
 
             self.turn = TileState.RED if self.turn == TileState.BLUE else TileState.BLUE
-            
+
+
+            self.click_sound.play()
             return True
 
         return False
