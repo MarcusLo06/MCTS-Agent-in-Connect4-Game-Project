@@ -1,4 +1,5 @@
 import os, random
+from customEnums import TileState
 
 def get_random_image_in_folder(folder_path: str) -> str:
     # 1. Get a list of all files in the folder that end with .png
@@ -40,3 +41,16 @@ def get_winning_blue_dot() -> str:
 
 def get_winning_red_dot() -> str:
     return "assets/connect4/winning_red_dot.png"
+
+
+def get_profile_icon(color: TileState, isRobot: bool = False) -> str:
+    if isRobot:
+        if color == TileState.RED:
+            return "assets/connect4/red_robot.png"
+        elif color == TileState.BLUE:
+            return "assets/connect4/blue_robot.png"
+    else:
+        if color == TileState.RED:
+            return "assets/connect4/red_human.png"
+        elif color == TileState.BLUE:
+            return "assets/connect4/blue_human.png"

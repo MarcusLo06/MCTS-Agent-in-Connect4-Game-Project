@@ -6,7 +6,7 @@ from classes.tilemap import TileMap
 from classes.uiButton import UIButton
 from helpers.pixelTranslate import translatePixelToCoordinate
 from helpers.customTextRender import render_text_with_outline
-from helpers.assetsGetter import get_pixels_font
+from helpers.assetsGetter import get_pixels_font, get_profile_icon
 from customEnums import TileState, GameState
 from classes.MCTS import MCTSNode, mcts_search, free_mcts_memory
 
@@ -35,17 +35,18 @@ def game_scene(screen, clock, playbutton):
     ucbscoreFont = pygame.font.Font(get_pixels_font() , 22)
 
     btnFont = pygame.font.Font(get_pixels_font() , 16)
-    human_vs_bot_btn = UIButton(70, 50, 100, 25, (255, 0, 0), btnFont, "Human vs Bot", (255, 255, 255))
-    bot_vs_bot_btn = UIButton(WIDTH - 70, 50, 100, 25, (255, 0, 0), btnFont, "Bot vs Bot", (255, 255, 255))
+    red_player_btn = UIButton(70, 50, 50, 50, (255, 0, 0), btnFont, image_path=get_profile_icon(TileState.RED))
+    blue_player_btn = UIButton(WIDTH - 70, 50, 50, 50, (255, 0, 0), btnFont, image_path=get_profile_icon(TileState.BLUE))
 
     
     running = True
     debug = False
     processing = False
-    human_vs_bot = False
-    bot_vs_bot = False
     turn_no = 0
     mcts_iterations = 500
+
+    red_is_robot = False
+    blue_is_robot = False
 
     # Global/Class variables
     ai_thread = None
@@ -63,27 +64,26 @@ def game_scene(screen, clock, playbutton):
         # print("restarting")
         # tileMap.reset()
 
-    def toggle_human_vs_bot():
-        nonlocal human_vs_bot, bot_vs_bot
-        human_vs_bot = not human_vs_bot
-        bot_vs_bot = False
+    def toggle_red_player():
+        nonlocal red_is_robot, red_player_btn
+        if tileMap.turn == TileState.RED and processing: return
+        red_is_robot = not red_is_robot
+        red_player_btn.image_path = get_profile_icon(TileState.RED, red_is_robot)
+        red_player_btn.refresh_image()
 
-        human_vs_bot_btn.color = (255 * (not human_vs_bot), 255 * human_vs_bot, 0)
-        bot_vs_bot_btn.color = (255 * (not bot_vs_bot), 255 * bot_vs_bot, 0)
 
-    def toggle_bot_vs_bot():
-        nonlocal bot_vs_bot, human_vs_bot
-        bot_vs_bot = not bot_vs_bot
-        human_vs_bot = False
-
-        human_vs_bot_btn.color = (255 * (not human_vs_bot), 255 * human_vs_bot, 0)
-        bot_vs_bot_btn.color = (255 * (not bot_vs_bot), 255 * bot_vs_bot, 0)
+    def toggle_blue_player():
+        nonlocal blue_is_robot, blue_player_btn
+        if tileMap.turn == TileState.BLUE and processing: return
+        blue_is_robot = not blue_is_robot
+        blue_player_btn.image_path = get_profile_icon(TileState.BLUE, blue_is_robot)
+        blue_player_btn.refresh_image()
         
 
 
     playbutton.on_click = reset_game
-    human_vs_bot_btn.on_click = toggle_human_vs_bot
-    bot_vs_bot_btn.on_click = toggle_bot_vs_bot
+    red_player_btn.on_click = toggle_red_player
+    blue_player_btn.on_click = toggle_blue_player
 
     while running:
         dt = clock.tick(FPS) / 1000.0
@@ -104,8 +104,8 @@ def game_scene(screen, clock, playbutton):
 
                 
             else:
-                human_vs_bot_btn.handle_event(e)
-                bot_vs_bot_btn.handle_event(e)
+                red_player_btn.handle_event(e)
+                blue_player_btn.handle_event(e)
             
                 if e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_SPACE:
@@ -117,8 +117,7 @@ def game_scene(screen, clock, playbutton):
 
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
-                    if bot_vs_bot: continue
-                    if human_vs_bot and tileMap.turn == TileState.BLUE: continue
+                    if (red_is_robot and tileMap.turn == TileState.RED) or (blue_is_robot and tileMap.turn == TileState.BLUE): continue
 
                     arrive_target = pygame.mouse.get_pos()
                     arrive_target = Vector2(arrive_target) - Vector2(0, TOPBARHEIGHT)
@@ -129,7 +128,7 @@ def game_scene(screen, clock, playbutton):
 
         # AI autoplay function calling
         if tileMap.state == GameState.PLAYING:
-            if bot_vs_bot or (human_vs_bot and tileMap.turn == TileState.BLUE):
+            if (red_is_robot and tileMap.turn == TileState.RED) or (blue_is_robot and tileMap.turn == TileState.BLUE):
                 # 1. Start thinking if not already thinking
 
                 if not processing:
@@ -207,7 +206,7 @@ def game_scene(screen, clock, playbutton):
 
 
         # hover dot place preview
-        if TOPBARHEIGHT <= target[1] < HEIGHT + TOPBARHEIGHT and not bot_vs_bot and not (human_vs_bot and tileMap.turn == TileState.BLUE):
+        if TOPBARHEIGHT <= target[1] < HEIGHT + TOPBARHEIGHT and not((red_is_robot and tileMap.turn == TileState.RED) or (blue_is_robot and tileMap.turn == TileState.BLUE)):
             target_coordinate = translatePixelToCoordinate(target, tileSize)
             tileMap.update_preview_column(target_coordinate)
         else:
@@ -264,8 +263,8 @@ def game_scene(screen, clock, playbutton):
         if tileMap.state != GameState.PLAYING:
             playbutton.draw(screen)
         else:
-            human_vs_bot_btn.draw(screen)
-            bot_vs_bot_btn.draw(screen)
+            red_player_btn.draw(screen)
+            blue_player_btn.draw(screen)
 
 
         pygame.display.flip()
